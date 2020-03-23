@@ -1,0 +1,218 @@
+defmodule Huffman do
+
+    def sample do
+    'the quick brown fox jumps over the lazy dog
+    this is a sample text that we will use when we build
+    up a table we will only handle lower case letters and
+    no punctuation symbols the frequency will of course not
+    represent english but it is probably not that far off'
+    end
+
+    def text do 'this is something we should encode'
+    end
+
+    #Helper functions to clean the text
+    def starMan(sample) do
+      removeSpace(removeBar(removeStuff(sample)))
+    end
+
+    def removeStuff(text) do remove(?\n, text) end
+
+    def removeBar(text) do remove(?\r, text) end
+
+    def removeSpace(text) do remove(?\s, text) end
+
+    #Main function to build tree
+    def tree([h|t]) do
+      list = pack([h|t])
+      freqList = [freq2(list)]
+      tree = buildTree(freqList)
+      sortedTree = isort(tree)
+      huffmanTree = buildTree3(sortedTree)
+      encodeTable(huffmanTree, [])
+      seq = encode(text, encodeTable(huffmanTree, []))
+      decode = decode_table(huffmanTree)
+      decode(seq, decode)
+    end
+
+    #Functions to count frequency
+    def freq([]) do 0 end
+    def freq([h|t]) do freq(t) + 1 end
+    def freq(h) do 1 end
+
+    def freq2([]) do [] end
+    def freq2([h|t]) do
+      if freq(h) != 1 do
+        [[List.first(h), freq(h)]|freq2(t)]
+      else
+        [[h, freq(h)]|freq2(t)]
+      end
+    end
+
+    #Functions to build tree
+    def buildTree([[]]) do [] end
+    def buildTree([[h|t]]) do
+          tree = [buildTree2(h, [h|t])|buildTree([t])]
+    end
+
+    def buildTree2([]) do [] end
+    def buildTree2([letter, freq], [h|t]) do
+      list = {freq,letter}
+    end
+
+    def buildTree3([h1, h2|t]) do
+      cond do
+        t != [] ->
+          buildTree3(isort([buildTree4(h1, h2)|t]))
+        t == [] ->
+          isort([buildTree4(h1, h2)|t])
+      end
+    end
+
+    def buildTree4({freq1, letter1}, {freq2,letter2}) do
+      {freq1 + freq2, {letter1, letter2}}
+    end
+
+    def encodeTable([{h,t}], path) do
+      encodeTable2({h,t}, path)
+    end
+
+    def encodeTable2({h,t}, path) do
+      a = encodeTable2(h, [0|path])
+      b = encodeTable2(t, [1|path])
+      a ++ b
+    end
+    def encodeTable2(x, path) do
+      [{x, Enum.reverse(path)}]
+    end
+
+    def encode([], _), do: []
+  def encode([char | rest], table) do
+    {_, code} = List.keyfind(table, char, 0)
+    code ++ encode(rest, table)
+  end
+
+
+  def decode_table(tree), do: encodeTable(tree, [])
+
+  def decode([], _), do: []
+  def decode(seq, table) do
+    {char, rest} = decode_char(seq, 1, table)
+    [char | decode(rest, table)]
+  end
+
+  def decode_char(seq, n, table) do
+    {code, rest} = Enum.split(seq, n)
+    case List.keyfind(table, code, 1) do
+      {char, _} ->
+        {char, rest}
+
+      nil ->
+        decode_char(seq, n + 1, table)
+    end
+  end
+
+    # def decode_table(tree), do: tree
+    #
+    # def decode(seq, tree), do: decode(seq, tree, tree)
+    # def decode([], char, _), do: [char]
+    # def decode([0 | seq], {left, _}, tree) do
+    #   decode(seq, left, tree)
+    # end
+    # def decode([1 | seq], {_, right}, tree) do
+    #   decode(seq, right, tree)
+    # end
+    # def decode(seq, char, tree) do
+    #   [char | decode(seq, tree, tree)]
+    # end
+
+    # def encode([{h,t}], path) do
+    #   encode2({h,t}, path, 1)
+    # end
+    #
+    # def encode2({h,t}, path, count) do
+    # encode2(h, path, 0) ++ encode2(t, reverse(path(path, count), []), 1)
+    # end
+    # def encode2(h, path, count) do [{h, path}] end
+
+    # def path([], count) do
+    #   if count == 0 do
+    #     [0]
+    #   else
+    #     [1]
+    #   end
+    # end
+    # def path([h], count) do
+    #   if count == 0 do
+    #     [0,h]
+    #   else
+    #     [1,h]
+    #   end
+    # end
+    # def path([h|t], count) do
+    #   if count == 0 do
+    #     [0|[h|t]]
+    #   else
+    #    [1|[h|t]]
+    #  end
+    # end
+
+
+    def reverse([], reversed) do reversed end
+    def reverse([h|t], reversed) do
+          reverse(t, [h|reversed])
+    end
+
+    #Helper functions to create the tree
+    def pack([x]) do [x] end
+    def pack([]) do [] end
+    def pack([h|t]) do
+      if Enum.member?(t, h) do
+        [[h|dontremove(h,t)]|pack(remove(h, t))]
+      else
+        [h|pack(t)]
+      end
+    end
+
+    def remove(x, [x]) do [] end
+    def remove(x, [h|[]]) do [h] end
+    def remove(x, [h|t]) do
+        cond do
+          x == h ->
+            remove(x, t)
+          x != h  ->
+          [h|remove(x, t)]
+        end
+     end
+
+    def dontremove(x, [x]) do [x] end
+    def dontremove(x, [h]) do [] end
+    def dontremove(x, [h|t]) do
+      if x != h do
+        dontremove(x, t)
+      else
+        [h|dontremove(x, t)]
+    end
+  end
+
+  #Insertionsort to help with sorting the tree
+  def insert(element, []) do [element] end
+  def insert(element, [h|t]) do
+    cond do
+      element < h ->
+        [element|[h|t]]
+      element > h ->
+        [h|insert(element, t)]
+      element == h -> [element|[h|t]]
+      end
+    end
+
+    def isort([h], sorted) do insert(h, sorted) end
+    def isort([h|t], sorted) do
+      isort(t, insert(h, sorted))
+    end
+
+    def isort([h|t]) do isort([h|t], []) end
+
+
+end
